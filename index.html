@@ -1,75 +1,204 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
-    <!-- 
-      This is an HTML comment
-      You can write text in a comment and the content won't be visible in the page
-    -->
-
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="https://glitch.com/favicon.ico" />
 
-    <!--
-      This is the page head - it contains info the browser uses
-      Like the title, which appears on the browser tab but not inside the page
-      Further down you'll see the content that displays in the page
-    -->
-    <title>Hello World!</title>
+    <title>Visualización Global de Tsunamis</title>
 
-    <!-- The website stylesheet -->
+    <!-- Estilos CSS -->
     <link rel="stylesheet" href="/style.css" />
-
-    <!-- The website JavaScript file -->
+    
+    <!-- Carga de Plotly -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+    
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f7f9fc;
+        color: #333;
+      }
+      
+      .container {
+        width: 95%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      
+      header {
+        background-color: #1a5276;
+        color: white;
+        padding: 20px 0;
+        text-align: center;
+        border-radius: 0 0 10px 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      }
+      
+      h1 {
+        margin: 0;
+        font-size: 2.2rem;
+      }
+      
+      .subtitle {
+        font-style: italic;
+        margin-top: 5px;
+        font-weight: normal;
+        font-size: 1.1rem;
+      }
+      
+      .visualization-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        padding: 15px;
+        margin-bottom: 30px;
+      }
+      
+      #grafico {
+        width: 100%;
+        height: 700px;
+      }
+      
+      .control-panel {
+        background: #f0f4f8;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+      }
+      
+      .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+        margin-top: 10px;
+      }
+      
+      .slider-container {
+        flex: 1;
+        min-width: 300px;
+      }
+      
+      .slider-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+      
+      input[type="range"] {
+        width: 100%;
+      }
+      
+      button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.2s;
+      }
+      
+      button:hover {
+        background-color: #2980b9;
+      }
+      
+      .info-box {
+        background: #e8f4fc;
+        border-left: 4px solid #3498db;
+        padding: 12px 15px;
+        margin-top: 20px;
+        border-radius: 0 4px 4px 0;
+      }
+      
+      .info-box h3 {
+        margin-top: 0;
+        color: #2c3e50;
+      }
+      
+      footer {
+        margin-top: 30px;
+        text-align: center;
+        color: #7f8c8d;
+        padding: 15px 0;
+        font-size: 0.9rem;
+        border-top: 1px solid #ddd;
+      }
+      
+      @media (max-width: 768px) {
+        .filter-controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        
+        #grafico {
+          height: 500px;
+        }
+      }
+    </style>
+    
+    <!-- Script principal -->
     <script src="/script.js" defer></script>
   </head>
   <body>
-    <!--
-      The body includes the content you see in the page
-      Each element is defined using tags, like this <div></div>
-      The attributes like class="wrapper" let us style elements in the CSS
-    -->
-    <div id="grafico" style="width:100%;height:400px;"></div>
-
-    <div class="wrapper">
-      <div class="content" role="main">
-        <h1 class="title">Hello World!</h1>
-        <img
-          src="https://cdn.glitch.com/a9975ea6-8949-4bab-addb-8a95021dc2da%2Fillustration.svg?v=1618177344016"
-          class="illustration"
-          alt="Editor illustration"
-          title="Click the image!"
-        />
-        <div class="instructions">
-          <h2>Using this project</h2>
-          <p>
-            This is the Glitch <strong>Hello Website</strong> project. You can
-            use it to build your own site. Check out the code in the editor and open
-            the <span class="fileopener" data-file="TODO.md" data-line="0"
-              >TODO</span> for next steps!
-          </p>
-          <!--  🚧 TODO: ADD BUTTON HERE -->
-
-          <!-- Once you've added the button from TODO.md, click it in the page -->
-          <!-- Check out the function in script.js to see how it works -->
+    <header>
+      <div class="container">
+        <h1>Visualización Global de Tsunamis</h1>
+        <p class="subtitle">Distribución geográfica de eventos históricos</p>
+      </div>
+    </header>
+  
+    <div class="container">
+      <div class="control-panel">
+        <h2>Filtros de Visualización</h2>
+        <div class="filter-controls">
+          <div class="slider-container">
+            <h3>Rango de Años:</h3>
+            <div class="slider-labels">
+              <span id="yearRangeMin">1700</span>
+              <span id="yearRangeMax">2023</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="range" id="yearSliderMin" min="1700" max="2023" value="1700">
+              <input type="range" id="yearSliderMax" min="1700" max="2023" value="2023">
+            </div>
+          </div>
+          
+          <div>
+            <button id="resetFilter">Reiniciar Filtros</button>
+          </div>
         </div>
       </div>
+      
+      <div class="visualization-container">
+        <div id="grafico"></div>
+      </div>
+      
+      <div class="info-box">
+        <h3>Acerca de esta visualización</h3>
+        <p>Este mapa muestra la distribución geográfica de tsunamis registrados históricamente. El tamaño de cada punto representa la altura máxima del tsunami, mientras que el color indica el año en que ocurrió el evento.</p>
+        <p>Puedes interactuar con el mapa utilizando las siguientes funciones:</p>
+        <ul>
+          <li>Zoom con la rueda del ratón o los botones del panel de control</li>
+          <li>Rotación arrastrando el globo terráqueo</li>
+          <li>Filtrado por años usando los controles deslizantes</li>
+          <li>Información detallada al colocar el cursor sobre cada punto</li>
+        </ul>
+      </div>
     </div>
-    <!-- The footer holds our remix button — you can keep or delete it ✂ -->
-    <footer class="footer">
-      <div class="links"></div>
-      <a
-        class="btn--remix"
-        target="_top"
-        href="https://glitch.com/edit/#!/remix/glitch-hello-website"
-      >
-        <img
-          src="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FLogo_Color.svg?v=1618199565140"
-          alt=""
-        />
-        Remix on Glitch
-      </a>
+    
+    <footer>
+      <div class="container">
+        <p>Visualización creada con Plotly.js | Datos: Registro histórico de tsunamis</p>
+      </div>
     </footer>
   </body>
 </html>

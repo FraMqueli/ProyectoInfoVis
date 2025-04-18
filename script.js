@@ -121,7 +121,6 @@ window.addEventListener("DOMContentLoaded", function () {
     const añosMin = Math.min(...eventos.map(row => parseInt(row["Year"])));
     const añosMax = Math.max(...eventos.map(row => parseInt(row["Year"])));
     
-    // Agregar estos elementos HTML desde JavaScript o incorporarlos en tu HTML
     const controlDiv = document.createElement('div');
     controlDiv.innerHTML = `
       <div style="padding: 10px; background: #f5f5f5; border-radius: 5px; margin-top: 10px;">
