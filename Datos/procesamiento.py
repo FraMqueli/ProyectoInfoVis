@@ -11,11 +11,11 @@ df.columns = df.columns.str.replace("Nan", " ", regex=False)
 df = df.replace(r"Nan", " ", regex=True)
 
 # Seleccionar las columnas que se desea mantener
-columnas_interes = ['Sr.no', 'Year', 'Mo', 'Earthquake Magnitude', 'Country', 'Location Name', 'Latitude', 'Longitude', 'Maximum Water Height (m)']
+columnas_interes = ['Sr.no', 'Year', 'Mo', 'Dy',  'Earthquake Magnitude', 'Country', 'Location Name', 'Latitude', 'Longitude', 'Maximum Water Height (m)']
 df_filtrado = df[columnas_interes]
 
 # Eliminar columnas completamente vacías
 df_filtrado = df_filtrado.dropna(how='all', axis=1)
 
 # Guardar el nuevo archivo CSV con las columnas seleccionadas
-df_filtrado.to_csv("tsunamis_filtrados.csv", index=False)
+df_filtrado.to_csv("tsunamis_filtrados_2.csv", index=False)
