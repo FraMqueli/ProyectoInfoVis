@@ -1,187 +1,213 @@
-window.addEventListener("DOMContentLoaded", function () {
-  Plotly.d3.csv("Datos\\tsunamis_filtrados.csv", function (err, rows) {
-    if (err) {
-      console.error("Error leyendo el CSV:", err);
-      return;
-    }
-
-    // Filtramos eventos con latitud y longitud válidas
-    const eventos = rows.filter(row => row["Latitude"] && row["Longitude"]);
-
-    // Agregar información detallada en los tooltips
-    const hoverTexts = eventos.map(row => {
-      const altura = row["Maximum Water Height (m)"] 
-        ? `${row["Maximum Water Height (m)"]} m` 
-        : 'No disponible';
-      const causa = row["Cause"] ? row["Cause"] : 'No especificada';
-      const daños = row["Damage Description"] ? row["Damage Description"] : 'No registrados';
-      
-      return `<b>${row["Location Name"]}</b> (${row["Year"]})<br>` +
-             `Altura máxima: ${altura}<br>` +
-             `Causa: ${causa}<br>` +
-             `Daños: ${daños}<br>` +
-             `Coordenadas: ${row["Latitude"]}, ${row["Longitude"]}`;
-    });
-
-    // Calcular tamaño de marcadores con mejor escala logarítmica
-    const sizes = eventos.map(row => {
-      if (row["Maximum Water Height (m)"]) {
-        const altura = parseFloat(row["Maximum Water Height (m)"]);
-        return altura > 0 ? 5 + Math.log(altura) * 3 : 4;
-      }
-      return 4; // Tamaño predeterminado
-    });
-
-    // Configuración de los datos
-    const data = [{
-      type: 'scattergeo',
-      mode: 'markers',
-      name: 'Eventos de Tsunami',
-      lat: eventos.map(row => row["Latitude"]),
-      lon: eventos.map(row => row["Longitude"]),
-      text: hoverTexts,
-      hoverinfo: 'text',
-      marker: {
-        size: sizes,
-        color: eventos.map(row => parseInt(row["Year"])),
-        colorscale: 'Turbo',  // Escala más distinguible para años
-        colorbar: {
-          title: 'Año del evento',
-          titlefont: { size: 14 },
-          thickness: 20,
-          len: 0.7,
-          y: 0.5,
-          tickvals: [1700, 1800, 1900, 1950, 2000, 2023],  // Ajusta según tus datos
-          ticktext: ['1700', '1800', '1900', '1950', '2000', '2023']
-        },
-        line: { width: 1, color: 'rgba(0,0,0,0.5)' },
-        opacity: 0.75
-      }
-    }];
-
-    // Configuración del layout con mejoras
-    const layout = {
-      title: {
-        text: 'Distribución Global de Tsunamis Registrados en la Historia',
-        font: { size: 24, color: '#333' }
+// 1. Funciones de carga de datos
+function loadCSV() {
+  return new Promise((resolve, reject) => {
+    Papa.parse('Datos/tsunamis_filtrados.csv', {
+      download: true,
+      header: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          console.warn('Errores al parsear CSV:', results.errors);
+        }
+        resolve(results.data);
       },
-      width: 1200,
-      height: 700,
-      showlegend: true,
-      legend: {
-        x: 0.01,
-        y: 0.99,
-        bgcolor: 'rgba(255,255,255,0.8)',
-        bordercolor: '#999',
-        borderwidth: 1
-      },
-      geo: {
-        scope: 'world',
-        projection: { 
-          type: 'orthographic',  // Proyección esférica que muestra mejor distribución global
-          rotation: { lon: -145, lat: 20 }  // Centrado en el Pacífico donde hay más tsunamis
-        },
-        showland: true,
-        landcolor: 'rgb(240, 240, 240)',
-        showocean: true,
-        oceancolor: 'rgb(220, 230, 255)',
-        showcoastlines: true,
-        coastlinecolor: 'rgb(80, 80, 80)',
-        coastlinewidth: 0.5,
-        showcountries: true,
-        countrycolor: 'rgb(180, 180, 180)',
-        countrywidth: 0.5,
-        showframe: false
-      },
-      annotations: [{
-        x: 0.01,
-        y: 0.01,
-        xref: 'paper',
-        yref: 'paper',
-        text: 'Tamaño del punto indica la altura del tsunami',
-        showarrow: false,
-        font: { size: 12, color: '#666' }
-      }],
-      margin: { l: 0, r: 0, t: 50, b: 0 }
-    };
-
-    // Configuración adicional para mejor interactividad
-    const config = {
-      responsive: true,
-      scrollZoom: true,
-      displayModeBar: true,
-      modeBarButtonsToAdd: ['toImage', 'resetGeo'],
-      modeBarButtonsToRemove: ['lasso2d', 'select2d']
-    };
-
-    // Crear el gráfico con Plotly
-    Plotly.newPlot('grafico', data, layout, config);
-
-    // Añadir controles interactivos para filtrar por rango de años
-    const añosMin = Math.min(...eventos.map(row => parseInt(row["Year"])));
-    const añosMax = Math.max(...eventos.map(row => parseInt(row["Year"])));
-    
-    const controlDiv = document.createElement('div');
-    controlDiv.innerHTML = `
-      <div style="padding: 10px; background: #f5f5f5; border-radius: 5px; margin-top: 10px;">
-        <h4>Filtrar por año:</h4>
-        <div style="display: flex; align-items: center;">
-          <span id="yearRangeMin">${añosMin}</span>
-          <input type="range" id="yearSliderMin" min="${añosMin}" max="${añosMax}" value="${añosMin}" style="margin: 0 10px; width: 200px;">
-          <input type="range" id="yearSliderMax" min="${añosMin}" max="${añosMax}" value="${añosMax}" style="margin: 0 10px; width: 200px;">
-          <span id="yearRangeMax">${añosMax}</span>
-          <button id="resetFilter" style="margin-left: 20px;">Reiniciar</button>
-        </div>
-      </div>
-    `;
-    
-    document.getElementById('grafico').parentNode.insertBefore(controlDiv, document.getElementById('grafico').nextSibling);
-    
-    // Implementar la funcionalidad de filtrado
-    function updateYearRange() {
-      const minYear = parseInt(document.getElementById('yearSliderMin').value);
-      const maxYear = parseInt(document.getElementById('yearSliderMax').value);
-      
-      document.getElementById('yearRangeMin').textContent = minYear;
-      document.getElementById('yearRangeMax').textContent = maxYear;
-      
-      const filteredEvents = eventos.filter(row => {
-        const year = parseInt(row["Year"]);
-        return year >= minYear && year <= maxYear;
-      });
-      
-      Plotly.restyle('grafico', {
-        lat: [filteredEvents.map(row => row["Latitude"])],
-        lon: [filteredEvents.map(row => row["Longitude"])],
-        text: [filteredEvents.map(row => {
-          // Usar la misma función para generar tooltip que definimos antes
-          const altura = row["Maximum Water Height (m)"] 
-            ? `${row["Maximum Water Height (m)"]} m` 
-            : 'No disponible';
-          const causa = row["Cause"] ? row["Cause"] : 'No especificada';
-          
-          return `<b>${row["Location Name"]}</b> (${row["Year"]})<br>` +
-                 `Altura máxima: ${altura}<br>` +
-                 `Causa: ${causa}<br>` +
-                 `Coordenadas: ${row["Latitude"]}, ${row["Longitude"]}`;
-        })],
-        'marker.size': [filteredEvents.map(row => {
-          if (row["Maximum Water Height (m)"]) {
-            const altura = parseFloat(row["Maximum Water Height (m)"]);
-            return altura > 0 ? 5 + Math.log(altura) * 3 : 4;
-          }
-          return 4;
-        })],
-        'marker.color': [filteredEvents.map(row => parseInt(row["Year"]))]
-      });
-    }
-    
-    document.getElementById('yearSliderMin').addEventListener('input', updateYearRange);
-    document.getElementById('yearSliderMax').addEventListener('input', updateYearRange);
-    document.getElementById('resetFilter').addEventListener('click', function() {
-      document.getElementById('yearSliderMin').value = añosMin;
-      document.getElementById('yearSliderMax').value = añosMax;
-      updateYearRange();
+      error: (error) => reject(error)
     });
   });
-});
+}
+
+function loadPlates() {
+  return fetch('Datos/Datos/PB2002_plates.json')
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .catch(error => {
+      console.error('Error cargando placas tectónicas:', error);
+      throw error;
+    });
+}
+
+// 2. Cálculo de centroides para etiquetas de placas
+function computeCentroid(coords) {
+  if (!coords || coords.length === 0) return [0, 0];
+  
+  const [sumX, sumY] = coords.reduce(
+    ([ax, ay], [x, y]) => [ax + x, ay + y],
+    [0, 0]
+  );
+  return [sumX / coords.length, sumY / coords.length];
+}
+
+// 3. Función principal que ejecuta todo el proceso
+function initMap() {
+  Promise.all([loadCSV(), loadPlates()])
+    .then(([earthquakeData, platesData]) => {
+      // Procesamiento de datos sísmicos
+      const validQuakes = earthquakeData.filter(row => 
+        row.Latitude && 
+        row.Longitude && 
+        !isNaN(parseFloat(row['Earthquake Magnitude'])) || 0
+      );
+      
+      const quakeTrace = {
+        type: 'scattergeo',
+        mode: 'markers',
+        lat: validQuakes.map(row => parseFloat(row.Latitude)),
+        lon: validQuakes.map(row => parseFloat(row.Longitude)),
+        text: validQuakes.map(row => 
+          `${row['Location Name'] || 'Ubicación desconocida'}, ${row.Country || 'País desconocido'}\nMagnitud: ${row['Earthquake Magnitude']}`
+        ),
+        marker: {
+          size: validQuakes.map(row =>  parseFloat(row['Earthquake Magnitude']) * 1.1),
+          color: validQuakes.map(row => parseFloat(row['Earthquake Magnitude'])),
+          colorscale: 'Inferno',
+          cmin: 5,  // Magnitud mínima para mejor visualización
+          cmax: 9,  // Magnitud máxima esperada
+          colorbar: {
+            title: 'Magnitud (escala Mercalli)',
+            thickness: 20,
+            len: 0.5
+          },
+          line: {
+            width: 0.5,
+            color: 'black'
+          }
+        },
+        name: 'Terremotos',
+        hoverinfo: 'text',
+        hoverlabel: {
+          bgcolor: 'rgba(0,0,0,0.8)',
+          font: {
+            color: 'white',
+            family: 'Arial',
+            size: 12
+          }
+        }
+      };
+
+      // Procesamiento de placas tectónicas
+      const plateTraces = [];
+      platesData.features.forEach(feature => {
+        const { geometry, properties } = feature;
+        let polygons = [];
+
+        if (geometry.type === 'Polygon') {
+          polygons.push(geometry.coordinates[0]); // Anillo exterior
+        } else if (geometry.type === 'MultiPolygon') {
+          geometry.coordinates.forEach(polygon => {
+            polygons.push(polygon[0]); // Primer anillo de cada polígono
+          });
+        }
+
+        // Crear trazas para los bordes de las placas
+        polygons.forEach(ring => {
+          const lons = ring.map(coord => coord[0]);
+          const lats = ring.map(coord => coord[1]);
+          
+          plateTraces.push({
+            type: 'scattergeo',
+            mode: 'lines',
+            lon: lons,
+            lat: lats,
+            line: {
+              width: 1.2,
+              color: 'rgba(0, 100, 255, 0.7)'
+            },
+            hoverinfo: 'none',
+            showlegend: false
+          });
+        });
+
+        // Añadir etiquetas de nombres de placas
+        const allCoords = polygons.flat();
+        if (allCoords.length > 10) {  // Solo para placas con suficiente tamaño
+          const [centroidLon, centroidLat] = computeCentroid(allCoords);
+          
+          plateTraces.push({
+            type: 'scattergeo',
+            mode: 'text',
+            lon: [centroidLon],
+            lat: [centroidLat],
+            text: [properties.PlateName],
+            textfont: {
+              size: 10,
+              color: 'rgba(0, 80, 200, 0.9)',
+              family: 'Arial, sans-serif'
+            },
+            hoverinfo: 'none',
+            showlegend: false
+          });
+        }
+      });
+
+      // Configuración del layout del mapa
+      const layout = {
+        title: {
+          text: 'Terremotos y Tsunamis con Placas Tectónicas',
+          font: {
+            size: 18,
+            family: 'Arial, sans-serif'
+          }
+        },
+        geo: {
+          scope: 'world',
+          projection: {
+            type: 'natural earth',
+            rotation: { lon: -20 }  // Centrar mejor el mapa
+          },
+          showland: true,
+          landcolor: 'rgb(230, 230, 230)',
+          showocean: true,
+          oceancolor: 'rgb(212, 236, 250)',
+          showcountries: true,
+          countrycolor: 'rgb(200, 200, 200)',
+          showcoastlines: true,
+          coastlinecolor: 'rgb(150, 150, 150)',
+          showlakes: true,
+          lakecolor: 'rgb(212, 236, 250)',
+          showframe: false,
+          framecolor: '#000',
+          bgcolor: 'rgba(240, 240, 240, 0.5)'
+        },
+        margin: {
+          l: 0, r: 0, b: 0, t: 40
+        },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        legend: {
+          orientation: 'h',
+          x: 0.5,
+          y: -0.1,
+          xanchor: 'center'
+        }
+      };
+
+      // Crear el gráfico
+      Plotly.newPlot(
+        'plot', 
+        [...plateTraces, quakeTrace], 
+        layout, 
+        {
+          responsive: false,
+          staticPlot: true  // Permitir interactividad
+        }
+      );
+    })
+    .catch(error => {
+      console.error('Error inicializando el mapa:', error);
+      document.getElementById('plot').innerHTML = `
+        <div style="color: red; padding: 20px; text-align: center;">
+          <h3>Error al cargar los datos</h3>
+          <p>${error.message}</p>
+          <p>Por favor verifica la consola para más detalles.</p>
+        </div>
+      `;
+    });
+}
+
+// 4. Iniciar la aplicación cuando el DOM esté listo
+if (document.readyState !== 'loading') {
+  initMap();
+} else {
+  document.addEventListener('DOMContentLoaded', initMap);
+}
