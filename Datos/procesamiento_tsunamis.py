@@ -11,7 +11,7 @@ df.columns = df.columns.str.replace("Nan", " ", regex=False)
 df = df.replace(r"Nan", " ", regex=True)
 
 # Seleccionar las columnas que se desea mantener
-columnas_interes = ['Sr.no', 'Year', 'Mo', 'Dy',  'Earthquake Magnitude', 'Country', 'Location Name', 'Latitude', 'Longitude', 'Maximum Water Height (m)']
+columnas_interes = ['Sr.no', 'Year', 'Mo', 'Dy',  'Earthquake Magnitude', 'Country', 'Location Name', 'Latitude', 'Longitude', 'Maximum Water Height (m)', 'Total Deaths', 'Total Damage ($Mil)']
 df_filtrado = df[columnas_interes]
 
 # Eliminar columnas completamente vacías
