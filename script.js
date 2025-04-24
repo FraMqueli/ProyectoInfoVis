@@ -15,17 +15,6 @@ function loadCSV() {
   });
 }
 
-function loadPlates() {
-  return fetch('Datos/Datos/PB2002_plates.json')
-    .then(response => {
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return response.json();
-    })
-    .catch(error => {
-      console.error('Error cargando placas tectónicas:', error);
-      throw error;
-    });
-}
 
 // 2. Cálculo de centroides para etiquetas de placas
 function computeCentroid(coords) {
@@ -38,172 +27,185 @@ function computeCentroid(coords) {
   return [sumX / coords.length, sumY / coords.length];
 }
 
-// 3. Función principal que ejecuta todo el proceso
+// Cambiamos las anotaciones para hacerlas más obvias y siempre visibles
 function initMap() {
-  Promise.all([loadCSV(), loadPlates()])
-    .then(([earthquakeData, platesData]) => {
-      // Procesamiento de datos sísmicos
-      const validQuakes = earthquakeData.filter(row => 
-        row.Latitude && 
-        row.Longitude && 
-        !isNaN(parseFloat(row['Earthquake Magnitude'])) || 0
-      );
-      
-      const quakeTrace = {
+  loadCSV()
+    .then(tsunamiData => {
+      // 1. Filtrar y parsear tsunamis con altura válida
+      const validTsunamis = tsunamiData
+        .filter(row =>
+          row.Latitude &&
+          row.Longitude &&
+          row['Maximum Water Height (m)'] &&
+          !isNaN(parseFloat(row['Maximum Water Height (m)']))
+        )
+        .map(row => ({
+          lat:     parseFloat(row.Latitude),
+          lon:     parseFloat(row.Longitude),
+          height:  parseFloat(row['Maximum Water Height (m)']),
+          deaths:  parseInt(row['Total Deaths'], 10) || 0,
+          damage:  parseFloat(row['Total Damage ($Mil)']) || 0,
+          place:   row['Location Name'] || 'Desconocida',
+          country: row.Country || ''
+        }));
+
+      // 2. Ordenar y seleccionar top 100 y top 3
+      validTsunamis.sort((a, b) => b.height - a.height);
+      const top100 = validTsunamis.slice(0, 100);
+      const top3   = top100.slice(0, 3);
+      const rest97 = top100.slice(3);
+
+      // 3. Trazas de Plotly
+
+      // 3.1 Tsunamis 4°–100° en azul
+      const blueTrace = {
         type: 'scattergeo',
         mode: 'markers',
-        lat: validQuakes.map(row => parseFloat(row.Latitude)),
-        lon: validQuakes.map(row => parseFloat(row.Longitude)),
-        text: validQuakes.map(row => 
-          `${row['Location Name'] || 'Ubicación desconocida'}, ${row.Country || 'País desconocido'}\nMagnitud: ${row['Earthquake Magnitude']}`
-        ),
+        lat: rest97.map(d => d.lat),
+        lon: rest97.map(d => d.lon),
         marker: {
-          size: validQuakes.map(row =>  parseFloat(row['Earthquake Magnitude']) * 1.1),
-          color: validQuakes.map(row => parseFloat(row['Earthquake Magnitude'])),
-          colorscale: 'Inferno',
-          cmin: 5,  // Magnitud mínima para mejor visualización
-          cmax: 9,  // Magnitud máxima esperada
-          colorbar: {
-            title: 'Magnitud (escala Mercalli)',
-            thickness: 20,
-            len: 0.5
-          },
-          line: {
-            width: 0.5,
-            color: 'black'
-          }
+          color: 'blue',
+          size: rest97.map(d => Math.max(d.height * 0.2, 5)),
+          opacity: 0.7
         },
-        name: 'Terremotos',
         hoverinfo: 'text',
-        hoverlabel: {
-          bgcolor: 'rgba(0,0,0,0.8)',
-          font: {
-            color: 'white',
-            family: 'Arial',
-            size: 12
-          }
-        }
+        text: rest97.map(d =>
+          `${d.place}, ${d.country}<br>` +
+          `Altura ola: ${d.height} m`
+        ),
+        name: 'Tsunamis 4–100'
       };
 
-      // Procesamiento de placas tectónicas
-      const plateTraces = [];
-      platesData.features.forEach(feature => {
-        const { geometry, properties } = feature;
-        let polygons = [];
+      // 3.2 Top 3 tsunamis en rojo con detalle
+      const redTrace = {
+        type: 'scattergeo',
+        mode: 'markers+text',  // Añadimos texto directamente a los marcadores
+        lat: top3.map(d => d.lat),
+        lon: top3.map(d => d.lon),
+        marker: {
+          color: 'red',
+          size: top3.map(d => Math.max(d.height * 0.2, 10)),
+          line: { width: 1, color: 'darkred' }
+        },
+        
+        hoverinfo: 'none',
+        name: 'Top 3 Tsunamis'
+      };
 
-        if (geometry.type === 'Polygon') {
-          polygons.push(geometry.coordinates[0]); // Anillo exterior
-        } else if (geometry.type === 'MultiPolygon') {
-          geometry.coordinates.forEach(polygon => {
-            polygons.push(polygon[0]); // Primer anillo de cada polígono
-          });
-        }
+      // 4. Añadimos una traza adicional para los cuadros de información
+      const infoBoxes = {
+        type: 'scattergeo',
+        mode: 'markers+text',
+        lat: top3.map(d => d.lat + (d.lat > 0 ? -0.08 : 0.08) + 5),  // Desplazamos un poco en latitud
+        lon: top3.map(d => d.lon + (d.lon > 0 ? -0.08 : 0.08) + 5),  // Desplazamos un poco en longitud
+        marker: {
+          color: 'rgba(0,0,0,0)',  // Marcador invisible
+          size: 1
+        },
+        text: top3.map(d => 
+          `<b>${d.place}</b><br>` +
+          `Altura: ${d.height} m<br>` +
+          `Muertes: ${d.deaths}<br>` +
+          `Daños: $${d.damage} M`
+        ),
+        textposition: 'top center',
+        textfont: {
+          color: 'black',
+          size: 20,
+          family: 'Arial, sans-serif'
+        },
+        textborder: {
+          color: 'red',
+          width: 2
+        },
+        textbgcolor: 'rgba(255,255,255,0.95)',
+        textpad: 8,
+        showlegend: false,
+        hoverinfo: 'none'
+      };
 
-        // Crear trazas para los bordes de las placas
-        polygons.forEach(ring => {
-          const lons = ring.map(coord => coord[0]);
-          const lats = ring.map(coord => coord[1]);
-          
-          plateTraces.push({
-            type: 'scattergeo',
-            mode: 'lines',
-            lon: lons,
-            lat: lats,
-            line: {
-              width: 1.2,
-              color: 'rgba(0, 100, 255, 0.7)'
-            },
-            hoverinfo: 'none',
-            showlegend: false
-          });
-        });
-
-        // Añadir etiquetas de nombres de placas
-        const allCoords = polygons.flat();
-        if (allCoords.length > 10) {  // Solo para placas con suficiente tamaño
-          const [centroidLon, centroidLat] = computeCentroid(allCoords);
-          
-          plateTraces.push({
-            type: 'scattergeo',
-            mode: 'text',
-            lon: [centroidLon],
-            lat: [centroidLat],
-            text: [properties.PlateName],
-            textfont: {
-              size: 10,
-              color: 'rgba(0, 80, 200, 0.9)',
-              family: 'Arial, sans-serif'
-            },
-            hoverinfo: 'none',
-            showlegend: false
-          });
-        }
-      });
-
-      // Configuración del layout del mapa
+      // 5. Layout con menos dependencia de annotations
       const layout = {
         title: {
-          text: 'Terremotos y Tsunamis con Placas Tectónicas',
-          font: {
-            size: 18,
-            family: 'Arial, sans-serif'
-          }
+          text: 'Top 100 Tsunamis por Altura de Ola (m)',
+          font: { size: 18, family: 'Arial, sans-serif' }
         },
         geo: {
           scope: 'world',
-          projection: {
-            type: 'natural earth',
-            rotation: { lon: -20 }  // Centrar mejor el mapa
-          },
-          showland: true,
-          landcolor: 'rgb(230, 230, 230)',
-          showocean: true,
-          oceancolor: 'rgb(212, 236, 250)',
-          showcountries: true,
-          countrycolor: 'rgb(200, 200, 200)',
-          showcoastlines: true,
-          coastlinecolor: 'rgb(150, 150, 150)',
-          showlakes: true,
-          lakecolor: 'rgb(212, 236, 250)',
+          projection: { type: 'natural earth', rotation: { lon: -20 } },
+          showland: true, landcolor: 'rgb(230,230,230)',
+          showocean: true, oceancolor: 'rgb(212,236,250)',
+          showcountries: true, countrycolor: 'rgb(200,200,200)',
+          showcoastlines: true, coastlinecolor: 'rgb(150,150,150)',
           showframe: false,
-          framecolor: '#000',
-          bgcolor: 'rgba(240, 240, 240, 0.5)'
+          bgcolor: 'rgba(240,240,240,0.5)'
         },
-        margin: {
-          l: 0, r: 0, b: 0, t: 40
-        },
+        margin: { l: 10, r: 10, t: 50, b: 10 },
         paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        legend: {
-          orientation: 'h',
-          x: 0.5,
-          y: -0.1,
-          xanchor: 'center'
-        }
+        legend: { 
+          orientation: 'h', 
+          x: 0.5, 
+          y: 0.02, 
+          xanchor: 'center',
+          bgcolor: 'rgba(255,255,255,0.8)',
+          bordercolor: 'gray',
+          borderwidth: 1
+        },
+        // Añadimos líneas de conexión entre puntos y cuadros
+        shapes: top3.map((d, i) => {
+          const offsetLat = d.lat > 0 ? -0.08 : 0.08;
+          const offsetLon = d.lon > 0 ? -0.08 : 0.08;
+          return {
+            type: 'line',
+            x0: d.lon,
+            y0: d.lat,
+            x1: d.lon + offsetLon,
+            y1: d.lat + offsetLat,
+            line: {
+              color: 'red',
+              width: 2
+            },
+            xref: 'geo',
+            yref: 'geo'
+          };
+        })
       };
 
-      // Crear el gráfico
+      // 6. Dibujar con todas las trazas
       Plotly.newPlot(
-        'plot', 
-        [...plateTraces, quakeTrace], 
-        layout, 
-        {
-          responsive: false,
-          staticPlot: true  // Permitir interactividad
+        'plot',
+        [blueTrace, redTrace, infoBoxes],
+        layout,
+        { 
+          responsive: true,
+          staticPlot: true,        // Mapa estático sin interactividad
+          displayModeBar: false
         }
       );
     })
     .catch(error => {
       console.error('Error inicializando el mapa:', error);
       document.getElementById('plot').innerHTML = `
-        <div style="color: red; padding: 20px; text-align: center;">
-          <h3>Error al cargar los datos</h3>
+        <div style="color:red;padding:20px;text-align:center;">
+          <h3>Error al cargar datos</h3>
           <p>${error.message}</p>
-          <p>Por favor verifica la consola para más detalles.</p>
-        </div>
-      `;
+        </div>`;
     });
 }
+// Iniciar cuando el DOM esté listo
+if (document.readyState !== 'loading') {
+  initMap();
+} else {
+  document.addEventListener('DOMContentLoaded', initMap);
+}
+
+// Iniciar cuando el DOM esté listo
+if (document.readyState !== 'loading') {
+  initMap();
+} else {
+  document.addEventListener('DOMContentLoaded', initMap);
+}
+
 
 // 4. Iniciar la aplicación cuando el DOM esté listo
 if (document.readyState !== 'loading') {
