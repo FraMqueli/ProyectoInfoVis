@@ -17,6 +17,9 @@ df_filtrado = df[columnas_interes]
 # Eliminar columnas completamente vacías
 df_filtrado = df_filtrado.dropna(how='all', axis=1)
 
+# Eliminar filas que contengan valores nulos en columnas "Total Deaths" y "Total Damage ($Mil)"
+df_filtrado = df_filtrado.dropna(subset=['Total Deaths', 'Total Damage ($Mil)'])
+
 # Transformar Dy de float a int en los que no sean nulos
 df_filtrado['Dy'] = df_filtrado['Dy'].apply(lambda x: int(x) if pd.notnull(x) else x)
 
