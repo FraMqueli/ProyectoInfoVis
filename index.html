@@ -1,19 +1,31 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapa Estático de Terremotos, Tsunamis y Placas Tectónicas</title>
-  <!-- Plotly.js -->
-  <script src="https://cdn.plot.ly/plotly-2.18.2.min.js"></script>
-  <!-- PapaParse para CSV -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <!-- Estilos -->
-  <link rel="stylesheet" href="style.css">
-  <!-- Script principal -->
-  <script src="script.js" defer></script>
+  <meta charset="UTF-8" />
+  <title>Tsunamis – Mapa Mundí</title>
+
+  <!-- Plotly v2.x -->
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <!-- PapaParse para leer el CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #ffffff;  /* <-- fondo blanco */
+    }
+    #mapa, #tendencia {
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
-  <div id="plot"></div>
+
+  <div id="mapa"></div>
+  <div id="tendencia"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>
