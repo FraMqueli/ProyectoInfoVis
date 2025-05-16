@@ -1,8 +1,8 @@
 /* ==========================================================
-   Rutas – ajusta si cambian tus carpetas
+   Rutas
    ========================================================== */
 const CSV_PATH   = 'Datos/tsunamis_filtrados.csv';
-const AUDIO_PATH = 'audio/audio.mp3';       // coméntalo si no lo usas
+const AUDIO_PATH = 'audio/audio.mp3';       
 const BASE_VOL   = 0.3;                    // volumen mínimo
 
 /* ==========================================================
@@ -53,7 +53,6 @@ function dibujarGraficos(eventos, sound) {
     return;
   }
 
-  // Preparamos arrays útiles
   const heights = eventos.map(e => e.height);
   const maxH    = Math.max(...heights);
 
