@@ -156,10 +156,16 @@ function dibujarGraficos(eventos, sound) {
   // --------------------------------------------------------
   // 2) Scatter Altura vs Muertes + línea de tendencia
   // --------------------------------------------------------
-  const xValues = heights;
-  const yValues = eventos.map(e => e.deaths);
-  const { slope, intercept } = regresion(xValues, yValues);
-  const trendY = xValues.map(x => slope * x + intercept);
+  // Filtra eventos con muertes > 0 para el scatter logarítmico
+  const eventosLog = eventos.filter(e => e.deaths > 0);
+
+  const yValues = eventosLog.map(e => e.height);
+  const xValues = eventosLog.map(e => e.deaths);
+
+  // Usar log10 para la regresión
+  const logX = xValues.map(x => Math.log10(x));
+  const { slope, intercept } = regresion(logX, yValues);
+  const trendY = logX.map(x => slope * x + intercept);
 
   const scatterHM = {
     type: 'scatter',
@@ -185,8 +191,11 @@ function dibujarGraficos(eventos, sound) {
 
   const layoutHM = {
     title: 'Muertes vs Tamaño de Ola con Tendencia',
-    xaxis: { title: 'Altura de Ola (m)' },
-    yaxis: { title: 'Número de Muertes' },
+    yaxis: { title: 'Altura de Ola (m)' },
+    xaxis: {
+      title: 'Número de Muertes (escala logarítmica)',
+      type: 'log'
+    },
     height: 400,
     margin: { t:50, l:60, r:30, b:60 },
     paper_bgcolor: fondo,
@@ -194,7 +203,7 @@ function dibujarGraficos(eventos, sound) {
   };
 
   Plotly.newPlot('tendencia', [scatterHM, trendLine], layoutHM, { responsive: true });
-}
+  }
 
 /* ==========================================================
    Regresión lineal simple: y = slope * x + intercept
