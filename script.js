@@ -165,7 +165,18 @@ function dibujarGraficos(eventos, sound) {
   // Usar log10 para la regresión
   const logX = xValues.map(x => Math.log10(x));
   const { slope, intercept } = regresion(logX, yValues);
-  const trendY = logX.map(x => slope * x + intercept);
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+  const trendLinePoints = 50;
+  const trendLineX = [];
+  const trendLineY = [];
+  for (let i = 0; i < trendLinePoints; i++) {
+    // Espaciado logarítmico
+    const logx = Math.log10(minX) + (Math.log10(maxX) - Math.log10(minX)) * (i / (trendLinePoints - 1));
+    const x = Math.pow(10, logx);
+    trendLineX.push(x);
+    trendLineY.push(slope * logx + intercept);
+  }
 
   const scatterHM = {
     type: 'scatter',
@@ -173,34 +184,47 @@ function dibujarGraficos(eventos, sound) {
     x: xValues,
     y: yValues,
     marker: {
-      size: 8,
-      color: 'rgba(255,0,0,0.6)',
-      line: { width: 1, color: 'rgba(0,0,0,0.2)' }
+      size: 10,
+      color: 'rgba(30,136,229,0.7)',
+      line: { width: 1, color: '#fff' }
     },
-    name: 'Muertes vs Altura'
+    name: 'Tsunamis'
   };
 
   const trendLine = {
     type: 'scatter',
     mode: 'lines',
-    x: xValues,
-    y: trendY,
-    line: { width: 2, dash: 'dash' },
+    x: trendLineX,
+    y: trendLineY,
+    line: { width: 3, dash: 'dash', color: 'rgba(244,67,54,0.7)' },
     name: 'Tendencia'
   };
 
   const layoutHM = {
-    title: 'Muertes vs Tamaño de Ola con Tendencia',
-    yaxis: { title: 'Altura de Ola (m)' },
-    xaxis: {
-      title: 'Número de Muertes (escala logarítmica)',
-      type: 'log'
-    },
-    height: 400,
-    margin: { t:50, l:60, r:30, b:60 },
-    paper_bgcolor: fondo,
-    plot_bgcolor: fondo
-  };
+  title: {
+    text: 'Correlación entre Número de Muertes y Altura de Ola',
+    font: { size: 28 }
+  },
+  yaxis: { title: 'Altura de Ola (metros)', titlefont: { size: 18 } },
+  xaxis: {
+    title: 'Número de Muertes (escala logarítmica)',
+    type: 'log',
+    titlefont: { size: 18 },
+    tickvals: [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000],
+    ticktext: ['1', '2', '5', '10', '20', '50', '100', '200', '500', '1 000', '2 000', '5 000', '10 000', '20 000', '50 000', '100 000', '200 000', '500 000']
+  },
+  height: 500,
+  margin: { t:70, l:70, r:30, b:70 },
+  paper_bgcolor: '#f9f9f9',
+  plot_bgcolor: '#f9f9f9',
+  legend: {
+    orientation: 'h',
+    y: -0.2,
+    x: 0.5,
+    xanchor: 'center',
+    font: { size: 16 }
+  }
+};
 
   Plotly.newPlot('tendencia', [scatterHM, trendLine], layoutHM, { responsive: true });
   }
