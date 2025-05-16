@@ -2,7 +2,7 @@
    Rutas
    ========================================================== */
 const CSV_PATH   = 'Datos/tsunamis_filtrados.csv';
-const AUDIO_PATH = 'audio/audio.mp3';       
+const AUDIO_PATH = 'audio/audio.mp3';
 const BASE_VOL   = 0.3;                    // volumen mínimo
 
 /* ==========================================================
@@ -112,6 +112,7 @@ function dibujarGraficos(eventos, sound) {
 
   const layoutMap = {
     title: 'Tsunamis históricos – Mapa interactivo',
+    font: { size: 20 },
     height: 650,
     margin: { l:0, r:0, t:50, b:0 },
     geo: {
@@ -202,7 +203,7 @@ function dibujarGraficos(eventos, sound) {
   const layoutHM = {
   title: {
     text: 'Correlación entre Número de Muertes y Altura de Ola',
-    font: { size: 28 }
+    font: { size: 20 }
   },
   yaxis: { title: 'Altura de Ola (metros)', titlefont: { size: 18 } },
   xaxis: {
@@ -214,8 +215,8 @@ function dibujarGraficos(eventos, sound) {
   },
   height: 500,
   margin: { t:70, l:70, r:30, b:70 },
-  paper_bgcolor: '#f9f9f9',
-  plot_bgcolor: '#f9f9f9',
+  paper_bgcolor: 'rgba(255,255,255,0.8)',
+  plot_bgcolor: 'rgba(255,255,255,0.8)',
   legend: {
     orientation: 'h',
     y: -0.2,
